@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 #include <string>
 
-#include "xxx_base/xxx_string.h"
+#include "xxx/xxx_string.h"
 
 namespace {
 

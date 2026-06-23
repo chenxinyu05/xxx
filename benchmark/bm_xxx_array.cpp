@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 #include <vector>
 
-#include "xxx_base/xxx_array.h"
+#include "xxx/xxx_array.h"
 
 namespace {
 
