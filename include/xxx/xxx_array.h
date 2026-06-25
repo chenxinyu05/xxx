@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "xxx_allocator.h"
+#include "xxx_assert.h"
+
 #ifndef XXX_ARRAY_DEBUG
 #  ifdef DEBUG
 #    define XXX_ARRAY_DEBUG 1
@@ -13,13 +16,9 @@
 #  endif
 #endif
 
-#include "xxx_assert.h"
-
 #ifndef XXX_ARRAY_ASSERT
 #  define XXX_ARRAY_ASSERT XXX_ASSERT
 #endif
-
-#include "xxx_allocator.h"
 
 #ifndef XXX_ARRAY_ALLOCATOR
 #  define XXX_ARRAY_FREE    XXX_FREE
@@ -27,6 +26,8 @@
 #endif
 
 #define XXX_ARRAY_CAPACITY_MAX ((size_t)0x7fffffff)
+
+// #define XXX_ARRAY_INITIALIZER {0, 0, 0}
 
 #ifdef __cplusplus
 extern "C" {

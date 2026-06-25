@@ -1,7 +1,24 @@
 #ifndef XXX_STACK_H
 #define XXX_STACK_H
 
+#include <stdbool.h>
+
 #include "xxx_array.h"
+#include "xxx_assert.h"
+
+#ifndef XXX_STACK_DEBUG
+#  ifdef DEBUG
+#    define XXX_STACK_DEBUG 1
+#  else
+#    define XXX_STACK_DEBUG 0
+#  endif
+#endif
+
+#ifndef XXX_STACK_ASSERT
+#  define XXX_STACK_ASSERT XXX_ASSERT
+#endif
+
+// #define XXX_STACK_INITIALIZER { XXX_ARRAY_INITIALIZER }
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,7 +32,7 @@ static inline int xxx_stack_copy(xxx_stack_t *dst, const xxx_stack_t *src);
 static inline void xxx_stack_move(xxx_stack_t *dst, xxx_stack_t *src);
 static inline size_t xxx_stack_size(const xxx_stack_t *self);
 static inline bool xxx_stack_empty(const xxx_stack_t *self);
-static inline void **xxx_stack_peek(xxx_stack_t *self);
+static inline void **xxx_stack_top(xxx_stack_t *self);
 static inline int xxx_stack_push(xxx_stack_t *self, void *x);
 static inline void xxx_stack_pop(xxx_stack_t *self);
 static inline void xxx_stack_clear(xxx_stack_t *self);
@@ -59,7 +76,10 @@ bool xxx_stack_empty(const xxx_stack_t *self) {
 }
 
 static inline
-void **xxx_stack_peek(xxx_stack_t *self) {
+void **xxx_stack_top(xxx_stack_t *self) {
+#if XXX_STACK_DEBUG
+    XXX_STACK_ASSERT(!xxx_stack_empty(self), "stack underflow");
+#endif
     return xxx_array_back(&self->arr);
 }
 
@@ -70,6 +90,9 @@ int xxx_stack_push(xxx_stack_t *self, void *x) {
 
 static inline
 void xxx_stack_pop(xxx_stack_t *self) {
+#if XXX_STACK_DEBUG
+    XXX_STACK_ASSERT(!xxx_stack_empty(self), "stack underflow");
+#endif
     xxx_array_popback(&self->arr);
 }
 

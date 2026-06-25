@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "xxx_allocator.h"
+#include "xxx_assert.h"
+
 #ifndef XXX_I32ARRAY_DEBUG
 #  ifdef DEBUG
 #    define XXX_I32ARRAY_DEBUG 1
@@ -13,13 +16,9 @@
 #  endif
 #endif
 
-#include "xxx_assert.h"
-
 #ifndef XXX_I32ARRAY_ASSERT
 #  define XXX_I32ARRAY_ASSERT XXX_ASSERT
 #endif
-
-#include "xxx_allocator.h"
 
 #ifndef XXX_I32ARRAY_ALLOCATOR
 #  define XXX_I32ARRAY_FREE    XXX_FREE
@@ -27,6 +26,8 @@
 #endif
 
 #define XXX_I32ARRAY_CAPACITY_MAX ((size_t)0x7fffffff)
+
+// #define XXX_I32ARRAY_INITIALIZER {0, 0, 0}
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +47,7 @@ static inline int *xxx_i32array_at(xxx_i32array_t *self, size_t i);
 static inline int *xxx_i32array_front(xxx_i32array_t *self);
 static inline int *xxx_i32array_back(xxx_i32array_t *self);
 static inline int xxx_i32array_reserve(xxx_i32array_t *self, size_t n);
+static inline int xxx_i32array_assign(xxx_i32array_t *self, const int *arr, size_t len);
 static inline int xxx_i32array_pushback(xxx_i32array_t *self, int x);
 static inline void xxx_i32array_popback(xxx_i32array_t *self);
 static inline void xxx_i32array_clear(xxx_i32array_t *self);
@@ -161,6 +163,15 @@ int xxx_i32array_reserve(xxx_i32array_t *self, size_t n) {
     if (n > XXX_I32ARRAY_CAPACITY_MAX)
         return -1;
     return xxx_i32array_grow(self, n);
+}
+
+static inline
+int xxx_i32array_assign(xxx_i32array_t *self, const int *arr, size_t len) {
+    if (xxx_i32array_reserve(self, len) != 0)
+        return -1;
+    memcpy(self->buf, arr, len * sizeof(int));
+    self->len = len;
+    return 0;
 }
 
 static inline

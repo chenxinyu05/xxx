@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "xxx_allocator.h"
+#include "xxx_assert.h"
+
 #ifndef XXX_STRING_DEBUG
 #  ifdef DEBUG
 #    define XXX_STRING_DEBUG 1
@@ -14,13 +17,9 @@
 #  endif
 #endif
 
-#include "xxx_assert.h"
-
 #ifndef XXX_STRING_ASSERT
 #  define XXX_STRING_ASSERT XXX_ASSERT
 #endif
-
-#include "xxx_allocator.h"
 
 #ifndef XXX_STRING_ALLOCATOR
 #  define XXX_STRING_FREE    XXX_FREE
@@ -29,6 +28,8 @@
 #endif
 
 #define XXX_STRING_CAPACITY_MAX ((size_t)0x7ffffffe)
+
+// #define XXX_STRING_INITIALIZER {{0}, 0x80}
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,8 +49,8 @@ static inline char *xxx_string_at(xxx_string_t *self, size_t i);
 static inline char *xxx_string_front(xxx_string_t *self);
 static inline char *xxx_string_back(xxx_string_t *self);
 static inline int xxx_string_reserve(xxx_string_t *self, size_t n);
-static inline int xxx_string_assign(xxx_string_t *self, const char *s, size_t n);
-static inline int xxx_string_append(xxx_string_t *self, const char *s, size_t n);
+static inline int xxx_string_assign(xxx_string_t *self, const char *str, size_t len);
+static inline int xxx_string_append(xxx_string_t *self, const char *str, size_t len);
 static inline int xxx_string_pushback(xxx_string_t *self, char c);
 static inline void xxx_string_popback(xxx_string_t *self);
 static inline void xxx_string_clear(xxx_string_t *self);
@@ -71,8 +72,8 @@ typedef struct {
 
 struct xxx_string {
     union {
-        xxx_short_string_t sstr;
-        xxx_long_string_t lstr;
+        xxx_short_string_t s;
+        xxx_long_string_t l;
     };
 };
 
@@ -109,21 +110,21 @@ int xxx_short_string_grow(xxx_short_string_t *self, size_t new_cap) {
         return -1;
     size_t len = self->len & 0x7f;
     memcpy(new_buf, self->buf, len);
-    xxx_long_string_t *str = (xxx_long_string_t *)self;
-    str->buf = new_buf;
-    str->len = len;
-    str->cap = new_cap;
+    xxx_long_string_t *lstr = (xxx_long_string_t *)self;
+    lstr->buf = new_buf;
+    lstr->len = len;
+    lstr->cap = new_cap;
     return 0;
 }
 
 static inline
 int xxx_string_isshort(const xxx_string_t *self) {
-    return (self->sstr.len & 0x80) != 0;
+    return (self->s.len & 0x80) != 0;
 }
 
 static inline
 int xxx_string_init(xxx_string_t *self) {
-    self->sstr.len = 0x80;
+    self->s.len = 0x80;
     return 0;
 }
 
@@ -131,8 +132,8 @@ static inline
 void xxx_string_deinit(xxx_string_t *self) {
     if (xxx_string_isshort(self))
         return;
-    XXX_STRING_FREE(self->lstr.buf);
-    self->lstr.buf = NULL;
+    XXX_STRING_FREE(self->l.buf);
+    self->l.buf = NULL;
 }
 
 static inline
@@ -141,52 +142,52 @@ int xxx_string_copy(xxx_string_t *dst, const xxx_string_t *src) {
         return 0;
     if (xxx_string_isshort(src)) {
         if (!xxx_string_isshort(dst)) {
-            XXX_STRING_FREE(dst->lstr.buf);
+            XXX_STRING_FREE(dst->l.buf);
         }
         *dst = *src;
         return 0;
     }
-    size_t len = src->lstr.len;
+    size_t len = src->l.len;
     if (xxx_string_isshort(dst)) {
         char *new_buf = (char *)XXX_STRING_MALLOC(len + 1);
         if (new_buf == NULL)
             return -1;
-        dst->lstr.buf = new_buf;
-        dst->lstr.cap = len;
-    } else if (dst->lstr.cap < len) {
+        dst->l.buf = new_buf;
+        dst->l.cap = len;
+    } else if (dst->l.cap < len) {
         char *new_buf = (char *)XXX_STRING_MALLOC(len + 1);
         if (new_buf == NULL)
             return -1;
-        XXX_STRING_FREE(dst->lstr.buf);
-        dst->lstr.buf = new_buf;
-        dst->lstr.cap = len;
+        XXX_STRING_FREE(dst->l.buf);
+        dst->l.buf = new_buf;
+        dst->l.cap = len;
     }
-    memcpy(dst->lstr.buf, src->lstr.buf, len);
-    dst->lstr.len = len;
+    memcpy(dst->l.buf, src->l.buf, len);
+    dst->l.len = len;
     return 0;
 }
 
 static inline
 void xxx_string_move(xxx_string_t *dst, xxx_string_t *src) {
     if (!xxx_string_isshort(dst)) {
-        XXX_STRING_FREE(dst->lstr.buf);
+        XXX_STRING_FREE(dst->l.buf);
     }
     *dst = *src;
-    src->lstr.buf = NULL;
+    src->l.buf = NULL;
 }
 
 static inline
 size_t xxx_string_length(const xxx_string_t *self) {
     if (xxx_string_isshort(self))
-        return self->sstr.len & 0x7f;
-    return self->lstr.len;
+        return self->s.len & 0x7f;
+    return self->l.len;
 }
 
 static inline
 size_t xxx_string_capacity(const xxx_string_t *self) {
     if (xxx_string_isshort(self))
         return 22;
-    return self->lstr.cap;
+    return self->l.cap;
 }
 
 static inline
@@ -197,13 +198,13 @@ bool xxx_string_empty(const xxx_string_t *self) {
 static inline
 char *xxx_string_cstr(xxx_string_t *self) {
     if (xxx_string_isshort(self)) {
-        xxx_short_string_t *str = &self->sstr;
-        str->buf[str->len & 0x7f] = '\0';
-        return str->buf;
+        xxx_short_string_t *sstr = &self->s;
+        sstr->buf[sstr->len & 0x7f] = '\0';
+        return sstr->buf;
     }
-    xxx_long_string_t *str = &self->lstr;
-    str->buf[str->len] = '\0';
-    return str->buf;
+    xxx_long_string_t *lstr = &self->l;
+    lstr->buf[lstr->len] = '\0';
+    return lstr->buf;
 }
 
 static inline
@@ -214,8 +215,8 @@ char *xxx_string_at(xxx_string_t *self, size_t i) {
         "index %zu out of range [0, %zu)", i, xxx_string_length(self));
 #endif
     if (xxx_string_isshort(self))
-        return &self->sstr.buf[i];
-    return &self->lstr.buf[i];
+        return &self->s.buf[i];
+    return &self->l.buf[i];
 }
 
 static inline
@@ -224,8 +225,8 @@ char *xxx_string_front(xxx_string_t *self) {
     XXX_STRING_ASSERT(!xxx_string_empty(self), "string is empty");
 #endif
     if (xxx_string_isshort(self))
-        return &self->sstr.buf[0];
-    return &self->lstr.buf[0];
+        return &self->s.buf[0];
+    return &self->l.buf[0];
 }
 
 static inline
@@ -234,11 +235,11 @@ char *xxx_string_back(xxx_string_t *self) {
     XXX_STRING_ASSERT(!xxx_string_empty(self), "string is empty");
 #endif
     if (xxx_string_isshort(self)) {
-        xxx_short_string_t *str = &self->sstr;
-        return &str->buf[(str->len & 0x7f) - 1];
+        xxx_short_string_t *sstr = &self->s;
+        return &sstr->buf[(sstr->len & 0x7f) - 1];
     }
-    xxx_long_string_t *str = &self->lstr;
-    return &str->buf[str->len - 1];
+    xxx_long_string_t *lstr = &self->l;
+    return &lstr->buf[lstr->len - 1];
 }
 
 static inline
@@ -246,122 +247,122 @@ int xxx_string_reserve(xxx_string_t *self, size_t n) {
     if (n > XXX_STRING_CAPACITY_MAX)
         return -1;
     if (xxx_string_isshort(self)) {
-        xxx_short_string_t *str = &self->sstr;
+        xxx_short_string_t *sstr = &self->s;
         if (n <= 22)
             return 0;
-        return xxx_short_string_grow(str, n);
+        return xxx_short_string_grow(sstr, n);
     }
-    xxx_long_string_t *str = &self->lstr;
-    if (n <= str->cap)
+    xxx_long_string_t *lstr = &self->l;
+    if (n <= lstr->cap)
         return 0;
-    return xxx_long_string_grow(str, n);
+    return xxx_long_string_grow(lstr, n);
 }
 
 static inline
-int xxx_string_assign(xxx_string_t *self, const char *s, size_t n) {
+int xxx_string_assign(xxx_string_t *self, const char *str, size_t len) {
     bool is_short = xxx_string_isshort(self);
     if (is_short) {
-        xxx_short_string_t *str = &self->sstr;
-        if (n <= 22) {
-            memcpy(str->buf, s, n);
-            str->len = n | 0x80;
+        xxx_short_string_t *sstr = &self->s;
+        if (len <= 22) {
+            memcpy(sstr->buf, str, len);
+            sstr->len = len | 0x80;
             return 0;
         }
     } else {
-        xxx_long_string_t *str = &self->lstr;
-        if (n <= str->cap) {
-            memcpy(str->buf, s, n);
-            str->len = n;
+        xxx_long_string_t *lstr = &self->l;
+        if (len <= lstr->cap) {
+            memcpy(lstr->buf, str, len);
+            lstr->len = len;
             return 0;
         }
     }
-    if (n > XXX_STRING_CAPACITY_MAX)
+    if (len > XXX_STRING_CAPACITY_MAX)
         return -1;
-    char *new_buf = (char *)XXX_STRING_MALLOC(n + 1);
+    char *new_buf = (char *)XXX_STRING_MALLOC(len + 1);
     if (new_buf == NULL)
         return -1;
-    memcpy(new_buf, s, n);
-    xxx_long_string_t *str = &self->lstr;
+    memcpy(new_buf, str, len);
+    xxx_long_string_t *lstr = &self->l;
     if (!is_short) {
-        XXX_STRING_FREE(str->buf);
+        XXX_STRING_FREE(lstr->buf);
     }
-    str->buf = new_buf;
-    str->len = n;
-    str->cap = n;
+    lstr->buf = new_buf;
+    lstr->len = len;
+    lstr->cap = len;
     return 0;
 }
 
 static inline
-int xxx_string_append(xxx_string_t *self, const char *s, size_t n) {
-    char *old_buf;
+int xxx_string_append(xxx_string_t *self, const char *str, size_t len) {
+    char *buf;
     if (xxx_string_isshort(self)) {
-        xxx_short_string_t *str = &self->sstr;
-        size_t len = str->len & 0x7f;
-        if (n > XXX_STRING_CAPACITY_MAX - len)
+        xxx_short_string_t *sstr = &self->s;
+        size_t len = sstr->len & 0x7f;
+        if (len > XXX_STRING_CAPACITY_MAX - len)
             return -1;
-        old_buf = str->buf;
-        size_t new_len = len + n;
+        buf = sstr->buf;
+        size_t new_len = len + len;
         if (new_len <= 22) {
-            memcpy(str->buf + len, s, n);
-            str->len += n;
+            memcpy(sstr->buf + len, str, len);
+            sstr->len += len;
             return 0;
         }
         size_t new_cap = 44;
         if (new_cap < new_len) {
             new_cap = new_len;
         }
-        if (xxx_short_string_grow(str, new_cap) != 0)
+        if (xxx_short_string_grow(sstr, new_cap) != 0)
             return -1;
     } else {
-        xxx_long_string_t *str = &self->lstr;
-        if (n > XXX_STRING_CAPACITY_MAX - str->len)
+        xxx_long_string_t *lstr = &self->l;
+        if (len > XXX_STRING_CAPACITY_MAX - lstr->len)
             return -1;
-        old_buf = str->buf;
-        size_t new_len = str->len + n;
-        if (new_len > str->cap) {
-            size_t new_cap = str->cap << 1;
+        buf = lstr->buf;
+        size_t new_len = lstr->len + len;
+        if (new_len > lstr->cap) {
+            size_t new_cap = lstr->cap << 1;
             if (new_cap < new_len || new_cap > XXX_STRING_CAPACITY_MAX) {
                 new_cap = new_len;
             }
-            if (xxx_long_string_grow(str, new_cap) != 0)
+            if (xxx_long_string_grow(lstr, new_cap) != 0)
                 return -1;
         }
     }
-    xxx_long_string_t *str = &self->lstr;
-    if (s >= old_buf && s < old_buf + str->len) {
-        s = str->buf + (s - old_buf);
+    xxx_long_string_t *lstr = &self->l;
+    if (str >= buf && str < buf + lstr->len) {
+        str = lstr->buf + (str - buf);
     }
-    memcpy(str->buf + str->len, s, n);
-    str->len += n;
+    memcpy(lstr->buf + lstr->len, str, len);
+    lstr->len += len;
     return 0;
 }
 
 static inline
 int xxx_string_pushback(xxx_string_t *self, char c) {
     if (xxx_string_isshort(self)) {
-        xxx_short_string_t *str = &self->sstr;
-        size_t len = str->len & 0x7f;
+        xxx_short_string_t *sstr = &self->s;
+        size_t len = sstr->len & 0x7f;
         if (len < 22) {
-            str->buf[len] = c;
-            ++str->len;
+            sstr->buf[len] = c;
+            ++sstr->len;
             return 0;
         }
-        if (xxx_short_string_grow(str, 44) != 0)
+        if (xxx_short_string_grow(sstr, 44) != 0)
             return -1;
     } else {
-        xxx_long_string_t *str = &self->lstr;
-        if (str->len == str->cap) {
-            if (str->cap == XXX_STRING_CAPACITY_MAX)
+        xxx_long_string_t *lstr = &self->l;
+        if (lstr->len == lstr->cap) {
+            if (lstr->cap == XXX_STRING_CAPACITY_MAX)
                 return -1;
-            size_t new_cap = str->cap << 1;
+            size_t new_cap = lstr->cap << 1;
             if (new_cap > XXX_STRING_CAPACITY_MAX)
                 new_cap = XXX_STRING_CAPACITY_MAX;
-            if (xxx_long_string_grow(str, new_cap) != 0)
+            if (xxx_long_string_grow(lstr, new_cap) != 0)
                 return -1;
         }
     }
-    xxx_long_string_t *str = &self->lstr;
-    str->buf[str->len++] = c;
+    xxx_long_string_t *lstr = &self->l;
+    lstr->buf[lstr->len++] = c;
     return 0;
 }
 
@@ -371,19 +372,19 @@ void xxx_string_popback(xxx_string_t *self) {
     XXX_STRING_ASSERT(!xxx_string_empty(self), "string is empty");
 #endif
     if (xxx_string_isshort(self)) {
-        --self->sstr.len;
+        --self->s.len;
         return;
     }
-    --self->lstr.len;
+    --self->l.len;
 }
 
 static inline
 void xxx_string_clear(xxx_string_t *self) {
     if (xxx_string_isshort(self)) {
-        self->sstr.len = 0x80;
+        self->s.len = 0x80;
         return;
     }
-    self->lstr.len = 0;
+    self->l.len = 0;
 }
 
 #endif

@@ -1,7 +1,24 @@
-#ifndef XXX_i32stack_H
-#define XXX_i32stack_H
+#ifndef XXX_I32STACK_H
+#define XXX_I32STACK_H
 
+#include <stdbool.h>
+
+#include "xxx_assert.h"
 #include "xxx_i32array.h"
+
+#ifndef XXX_I32STACK_DEBUG
+#  ifdef DEBUG
+#    define XXX_I32STACK_DEBUG 1
+#  else
+#    define XXX_I32STACK_DEBUG 0
+#  endif
+#endif
+
+#ifndef XXX_I32STACK_ASSERT
+#  define XXX_I32STACK_ASSERT XXX_ASSERT
+#endif
+
+// #define XXX_I32STACK_INITIALIZER { XXX_I32ARRAY_INITIALIZER }
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,7 +32,7 @@ static inline int xxx_i32stack_copy(xxx_i32stack_t *dst, const xxx_i32stack_t *s
 static inline void xxx_i32stack_move(xxx_i32stack_t *dst, xxx_i32stack_t *src);
 static inline size_t xxx_i32stack_size(const xxx_i32stack_t *self);
 static inline bool xxx_i32stack_empty(const xxx_i32stack_t *self);
-static inline int *xxx_i32stack_peek(xxx_i32stack_t *self);
+static inline int *xxx_i32stack_top(xxx_i32stack_t *self);
 static inline int xxx_i32stack_push(xxx_i32stack_t *self, int x);
 static inline void xxx_i32stack_pop(xxx_i32stack_t *self);
 static inline void xxx_i32stack_clear(xxx_i32stack_t *self);
@@ -59,7 +76,10 @@ bool xxx_i32stack_empty(const xxx_i32stack_t *self) {
 }
 
 static inline
-int *xxx_i32stack_peek(xxx_i32stack_t *self) {
+int *xxx_i32stack_top(xxx_i32stack_t *self) {
+#if XXX_I32STACK_DEBUG
+    XXX_I32STACK_ASSERT(!xxx_i32stack_empty(self), "stack underflow");
+#endif
     return xxx_i32array_back(&self->arr);
 }
 
@@ -70,6 +90,9 @@ int xxx_i32stack_push(xxx_i32stack_t *self, int x) {
 
 static inline
 void xxx_i32stack_pop(xxx_i32stack_t *self) {
+#if XXX_I32STACK_DEBUG
+    XXX_I32STACK_ASSERT(!xxx_i32stack_empty(self), "stack underflow");
+#endif
     xxx_i32array_popback(&self->arr);
 }
 
