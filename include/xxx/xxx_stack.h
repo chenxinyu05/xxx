@@ -78,14 +78,14 @@ bool xxx_stack_empty(const xxx_stack_t *self) {
 static inline
 void **xxx_stack_top(xxx_stack_t *self) {
 #if XXX_STACK_DEBUG
-    XXX_STACK_ASSERT(!xxx_stack_empty(self), "stack underflow");
+    XXX_STACK_ASSERT(!xxx_stack_empty(self), "stack is empty");
 #endif
     return xxx_array_back(&self->arr);
 }
 
 static inline
 int xxx_stack_push(xxx_stack_t *self, void *x) {
-    return xxx_array_pushback(&self->arr, x);
+    return xxx_array_push_back(&self->arr, x);
 }
 
 static inline
@@ -93,7 +93,7 @@ void xxx_stack_pop(xxx_stack_t *self) {
 #if XXX_STACK_DEBUG
     XXX_STACK_ASSERT(!xxx_stack_empty(self), "stack underflow");
 #endif
-    xxx_array_popback(&self->arr);
+    xxx_array_pop_back(&self->arr);
 }
 
 static inline

@@ -47,8 +47,8 @@ static inline void **xxx_array_at(xxx_array_t *self, size_t i);
 static inline void **xxx_array_front(xxx_array_t *self);
 static inline void **xxx_array_back(xxx_array_t *self);
 static inline int xxx_array_reserve(xxx_array_t *self, size_t n);
-static inline int xxx_array_pushback(xxx_array_t *self, void *x);
-static inline void xxx_array_popback(xxx_array_t *self);
+static inline int xxx_array_push_back(xxx_array_t *self, void *x);
+static inline void xxx_array_pop_back(xxx_array_t *self);
 static inline void xxx_array_clear(xxx_array_t *self);
 
 #ifdef __cplusplus
@@ -72,8 +72,9 @@ int xxx_array_grow(xxx_array_t *self, size_t new_cap) {
         "new capacity %zu exceeds maximum %zu", new_cap, XXX_ARRAY_CAPACITY_MAX);
 #endif
     void **new_buf = (void **)XXX_ARRAY_REALLOC(self->buf, new_cap * sizeof(void *));
-    if (new_buf == NULL)
+    if (new_buf == NULL) {
         return -1;
+    }
     self->buf = new_buf;
     self->cap = new_cap;
     return 0;
@@ -95,10 +96,12 @@ void xxx_array_deinit(xxx_array_t *self) {
 
 static inline
 int xxx_array_copy(xxx_array_t *dst, const xxx_array_t *src) {
-    if (dst == src)
+    if (dst == src) {
         return 0;
-    if (xxx_array_reserve(dst, src->len) != 0)
+    }
+    if (xxx_array_reserve(dst, src->len) != 0) {
         return -1;
+    }
     memcpy(dst->buf, src->buf, src->len * sizeof(void *));
     dst->len = src->len;
     return 0;
@@ -159,31 +162,35 @@ void **xxx_array_back(xxx_array_t *self) {
 
 static inline
 int xxx_array_reserve(xxx_array_t *self, size_t n) {
-    if (n <= self->cap)
+    if (n <= self->cap) {
         return 0;
-    if (n > XXX_ARRAY_CAPACITY_MAX)
+    }
+    if (n > XXX_ARRAY_CAPACITY_MAX) {
         return -1;
+    }
     return xxx_array_grow(self, n);
 }
 
 static inline
-int xxx_array_pushback(xxx_array_t *self, void *x) {
+int xxx_array_push_back(xxx_array_t *self, void *x) {
     if (self->len == self->cap) {
-        if (self->cap == XXX_ARRAY_CAPACITY_MAX)
+        if (self->cap == XXX_ARRAY_CAPACITY_MAX) {
             return -1;
+        }
         size_t new_cap = self->cap > 8 ? self->cap << 1 : 16;
         if (new_cap > XXX_ARRAY_CAPACITY_MAX) {
             new_cap = XXX_ARRAY_CAPACITY_MAX;
         }
-        if (xxx_array_grow(self, new_cap) != 0)
+        if (xxx_array_grow(self, new_cap) != 0) {
             return -1;
+        }
     }
     self->buf[self->len++] = x;
     return 0;
 }
 
 static inline
-void xxx_array_popback(xxx_array_t *self) {
+void xxx_array_pop_back(xxx_array_t *self) {
 #if XXX_ARRAY_DEBUG
     XXX_ARRAY_ASSERT(self->len > 0, "array is empty");
 #endif
