@@ -5,7 +5,7 @@
 
 namespace {
 
-static void BM_std_string_pushback_reserved(benchmark::State& state) {
+static void BM_std_string_push_back_reserved(benchmark::State& state) {
     size_t n = state.range(0);
     std::string str;
     str.reserve(n);
@@ -17,9 +17,9 @@ static void BM_std_string_pushback_reserved(benchmark::State& state) {
         benchmark::DoNotOptimize(str.c_str());
     }
 }
-BENCHMARK(BM_std_string_pushback_reserved)->RangeMultiplier(8)->Range(1, 1 << 16);
+BENCHMARK(BM_std_string_push_back_reserved)->RangeMultiplier(8)->Range(1, 1 << 16);
 
-static void BM_xxx_string_pushback_reserved(benchmark::State& state) {
+static void BM_xxx_string_push_back_reserved(benchmark::State& state) {
     size_t n = state.range(0);
     xxx_string_t str;
     xxx_string_init(&str);
@@ -27,15 +27,15 @@ static void BM_xxx_string_pushback_reserved(benchmark::State& state) {
     for (auto _ : state) {
         xxx_string_clear(&str);
         for (size_t i = 0; i < n; ++i) {
-            xxx_string_pushback(&str, 'x');
+            xxx_string_push_back(&str, 'x');
         }
-        benchmark::DoNotOptimize(xxx_string_cstr(&str));
+        benchmark::DoNotOptimize(xxx_string_c_str(&str));
     }
     xxx_string_deinit(&str);
 }
-BENCHMARK(BM_xxx_string_pushback_reserved)->RangeMultiplier(8)->Range(1, 1 << 16);
+BENCHMARK(BM_xxx_string_push_back_reserved)->RangeMultiplier(8)->Range(1, 1 << 16);
 
-static void BM_std_string_pushback_with_grow(benchmark::State& state) {
+static void BM_std_string_push_back_with_grow(benchmark::State& state) {
     size_t n = state.range(0);
     for (auto _ : state) {
         std::string str;
@@ -45,21 +45,21 @@ static void BM_std_string_pushback_with_grow(benchmark::State& state) {
         benchmark::DoNotOptimize(str.c_str());
     }
 }
-BENCHMARK(BM_std_string_pushback_with_grow)->RangeMultiplier(8)->Range(1, 1 << 16);
+BENCHMARK(BM_std_string_push_back_with_grow)->RangeMultiplier(8)->Range(1, 1 << 16);
 
-static void BM_xxx_string_pushback_with_grow(benchmark::State& state) {
+static void BM_xxx_string_push_back_with_grow(benchmark::State& state) {
     size_t n = state.range(0);
     for (auto _ : state) {
         xxx_string_t str;
         xxx_string_init(&str);
         for (size_t i = 0; i < n; ++i) {
-            xxx_string_pushback(&str, 'x');
+            xxx_string_push_back(&str, 'x');
         }
-        benchmark::DoNotOptimize(xxx_string_cstr(&str));
+        benchmark::DoNotOptimize(xxx_string_c_str(&str));
         xxx_string_deinit(&str);
     }
 }
-BENCHMARK(BM_xxx_string_pushback_with_grow)->RangeMultiplier(8)->Range(1, 1 << 16);
+BENCHMARK(BM_xxx_string_push_back_with_grow)->RangeMultiplier(8)->Range(1, 1 << 16);
 
 static void BM_std_string_append_with_grow(benchmark::State& state) {
     size_t n = state.range(0);
@@ -81,9 +81,9 @@ static void BM_xxx_string_append_with_grow(benchmark::State& state) {
         xxx_string_init(&str);
         xxx_string_assign(&str, "xxx", 3);
         for (size_t i = 0; i < n; ++i) {
-            xxx_string_append(&str, xxx_string_cstr(&str) + i, 3);
+            xxx_string_append(&str, xxx_string_c_str(&str) + i, 3);
         }
-        benchmark::DoNotOptimize(xxx_string_cstr(&str));
+        benchmark::DoNotOptimize(xxx_string_c_str(&str));
         xxx_string_deinit(&str);
     }
 }

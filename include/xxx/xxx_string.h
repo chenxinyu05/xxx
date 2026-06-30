@@ -44,7 +44,7 @@ static inline void xxx_string_move(xxx_string_t *dst, xxx_string_t *src);
 static inline size_t xxx_string_length(const xxx_string_t *self);
 static inline size_t xxx_string_capacity(const xxx_string_t *self);
 static inline bool xxx_string_empty(const xxx_string_t *self);
-static inline char *xxx_string_cstr(xxx_string_t *self);
+static inline char *xxx_string_c_str(xxx_string_t *self);
 static inline char *xxx_string_at(xxx_string_t *self, size_t i);
 static inline char *xxx_string_front(xxx_string_t *self);
 static inline char *xxx_string_back(xxx_string_t *self);
@@ -204,7 +204,7 @@ bool xxx_string_empty(const xxx_string_t *self) {
 }
 
 static inline
-char *xxx_string_cstr(xxx_string_t *self) {
+char *xxx_string_c_str(xxx_string_t *self) {
     if (xxx_string_isshort(self)) {
         xxx_short_string_t *sstr = &self->s;
         sstr->buf[sstr->len & 0x7f] = '\0';
